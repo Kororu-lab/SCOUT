@@ -51,7 +51,7 @@
 
 1. After installation, click the extension icon and open **Settings**.
 2. Enter your **DeepSeek API key**.  
-   → Don’t have one? [Visit the DeepSeek Developer Portal](#) to obtain an API key.
+   → Don’t have one? [Visit the DeepSeek Developer Portal](https://platform.deepseek.com/) to obtain an API key.
 3. Set your **preferred code language** and other options.
 4. Click **Save**.
 
@@ -105,7 +105,7 @@ See the [LICENSE](./LICENSE) file for more details.
 ## 🤝 Contact and Contributions
 
 - **🐞 Bug Reports & Feature Requests:**  
-  Submit issues via [GitHub Issues](https://github.com/your-org/scout/issues)
+  Now under development, this is a toy project but thankful to any kind of reporting!
 
 - **🛠️ Code Contributions:**  
   PRs are welcome! Fork this repo and submit your changes via a Pull Request.
