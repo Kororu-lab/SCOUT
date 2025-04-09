@@ -1,0 +1,82 @@
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0;
+    padding: 0;
+    width: 320px;
+    color: #333;
+  }
+  
+  .popup-container {
+    padding: 15px;
+  }
+  
+  h2 {
+    margin-top: 0;
+    color: #4285f4;
+    font-size: 18px;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+  }
+  
+  .instructions {
+    font-size: 14px;
+    margin-bottom: 15px;
+  }
+  
+  .instructions p {
+    margin-top: 0;
+    margin-bottom: 8px;
+  }
+  
+  .instructions ol {
+    margin-top: 0;
+    padding-left: 20px;
+  }
+  
+  .instructions ul {
+    padding-left: 20px;
+  }
+  
+  .instructions li {
+    margin-bottom: 5px;
+  }
+  
+  .actions {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+  }
+  
+  button {
+    background-color: #4285f4;
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    flex: 1;
+    font-size: 14px;
+  }
+  
+  button:hover {
+    background-color: #2b6ad9;
+  }
+  
+  .status {
+    font-size: 12px;
+    color: #666;
+    border-top: 1px solid #eee;
+    padding-top: 10px;
+  }
+  
+  #apiKeyStatus {
+    font-weight: bold;
+  }
+  
+  #apiKeyStatus.set {
+    color: #0f9d58;
+  }
+  
+  #apiKeyStatus.not-set {
+    color: #db4437;
+  }
