@@ -6,7 +6,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // 도움말 버튼 클릭 핸들러
     document.getElementById('helpBtn').addEventListener('click', function() {
-      chrome.tabs.create({ url: 'https://github.com/your-username/web-crawling-assistant/wiki' });
+      chrome.tabs.create({ url: 'https://github.com/Kororu-lab/SCOUT' });
     });
     
     // API 키 상태 확인
