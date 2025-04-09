@@ -1,6 +1,6 @@
 {
     "manifest_version": 3,
-    "name": "Web Crawling Assistant",
+    "name": "SCOUT: Smart Crawler Online Utility Tool",
     "version": "1.0.0",
     "description": "웹 페이지 크롤링을 위한 코드를 생성하는 Chrome 확장 프로그램",
     "permissions": [
