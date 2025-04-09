@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SCOUT - 웹 크롤링 도우미</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="popup-container">
+    <h2>SCOUT - 웹 크롤링 도우미</h2>
+    
+    <div class="instructions">
+      <p><strong>웹 페이지에서 크롤링 코드를 생성하는 방법:</strong></p>
+      <ol>
+        <li>
+          <strong>전체 페이지 크롤링:</strong>
+          <ul>
+            <li>페이지에서 빈 영역을 우클릭</li>
+            <li>"전체 페이지 크롤링 코드 생성" 선택</li>
+          </ul>
+        </li>
+        <li>
+          <strong>특정 영역 크롤링:</strong>
+          <ul>
+            <li>크롤링할 요소 선택</li>
+            <li>선택 영역 위에서 우클릭</li>
+            <li>"선택한 부분 크롤링 코드 생성" 선택</li>
+          </ul>
+        </li>
+      </ol>
+    </div>
+    
+    <div class="actions">
+      <button id="optionsBtn">설정</button>
+      <button id="helpBtn">도움말</button>
+    </div>
+    
+    <div class="status">
+      <p>DeepSeek API 키: <span id="apiKeyStatus">확인 중...</span></p>
+    </div>
+  </div>
+  
+  <script src="popup.js"></script>
+</body>
+</html>
