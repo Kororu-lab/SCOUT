@@ -1,0 +1,7 @@
+Will try add features of:
+
+새로운 코드 생성 시 이후 수정 요구 기능
+코드 생성 동안 로딩 서클
+DeepSeek(Reasoner) 선택 옵션
+생성결과에 스크롤 기능
+선택 전송이더라도 FULL HTML은 전송(전체 전송 체크박스)
