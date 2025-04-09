@@ -7,6 +7,28 @@ let capturedData = {
   cssSelector: ""
 };
 
+// 초기화 함수 - 콘텐츠 스크립트가 로드되었는지 확인
+function initializeContentScript() {
+  console.log("SCOUT Content Script Initialized");
+  
+  // 확장 프로그램이 로드되었음을 백그라운드 스크립트에 알림
+  chrome.runtime.sendMessage({ action: "contentScriptLoaded" }, (response) => {
+    if (chrome.runtime.lastError) {
+      console.error("Error notifying background script:", chrome.runtime.lastError);
+    } else if (response) {
+      console.log("Background script acknowledged content script:", response);
+    }
+  });
+}
+
+// 페이지 로드 시 초기화 실행
+document.addEventListener('DOMContentLoaded', initializeContentScript);
+
+// 콘텐츠 스크립트가 이미 로드된 페이지에 주입될 경우를 위한 즉시 초기화
+if (document.readyState === 'complete' || document.readyState === 'interactive') {
+  initializeContentScript();
+}
+
 // 선택한 요소의 XPath 생성
 function getElementXPath(element) {
   if (!element || element.nodeType !== 1) return "";
@@ -59,10 +81,13 @@ function getElementCssSelector(element) {
 
 // UI 생성 함수
 function createCrawlingUI(mode) {
+  console.log("Creating crawling UI for mode:", mode);
+
   // 이미 존재하는 UI가 있다면 제거
   const existingUI = document.getElementById('crawling-assistant-ui');
   if (existingUI) {
     document.body.removeChild(existingUI);
+    console.log("Removed existing UI");
   }
   
   // UI 컨테이너 생성
@@ -72,14 +97,15 @@ function createCrawlingUI(mode) {
     position: fixed;
     top: 20px;
     right: 20px;
-    width: 320px;
+    width: 350px;
     background: white;
-    border: 1px solid #ccc;
+    border: 2px solid #4285f4;
     border-radius: 8px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    z-index: 9999;
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+    z-index: 2147483647;
     font-family: Arial, sans-serif;
-    padding: 15px;
+    padding: 20px;
+    transition: all 0.3s ease;
   `;
   
   // 헤더 생성
@@ -96,6 +122,7 @@ function createCrawlingUI(mode) {
   const title = document.createElement('h3');
   title.textContent = mode === 'full' ? '전체 페이지 크롤링' : '선택 영역 크롤링';
   title.style.margin = '0';
+  title.style.color = '#4285f4';
   
   const closeBtn = document.createElement('button');
   closeBtn.textContent = 'X';
@@ -104,6 +131,7 @@ function createCrawlingUI(mode) {
     border: none;
     font-size: 16px;
     cursor: pointer;
+    color: #666;
   `;
   closeBtn.onclick = () => document.body.removeChild(uiContainer);
   
@@ -221,7 +249,53 @@ function createCrawlingUI(mode) {
     }
   });
   
-  document.body.appendChild(uiContainer);
+  // UI를 document에 추가
+  try {
+    document.body.appendChild(uiContainer);
+    console.log("UI successfully added to document body");
+    
+    // 알림 표시 (잠시 후 사라짐)
+    const notification = document.createElement('div');
+    notification.textContent = mode === 'full' 
+      ? '전체 페이지 크롤링 준비가 완료되었습니다.' 
+      : '선택 영역 크롤링 준비가 완료되었습니다.';
+    notification.style.cssText = `
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #4285f4;
+      color: white;
+      padding: 10px 20px;
+      border-radius: 4px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+      z-index: 2147483647;
+      font-family: Arial, sans-serif;
+    `;
+    document.body.appendChild(notification);
+    
+    // 3초 후 알림 제거
+    setTimeout(() => {
+      if (document.body.contains(notification)) {
+        document.body.removeChild(notification);
+      }
+    }, 3000);
+    
+    // UI가 화면 밖으로 나가지 않도록 위치 조정
+    const rect = uiContainer.getBoundingClientRect();
+    if (rect.right > window.innerWidth) {
+      uiContainer.style.right = 'auto';
+      uiContainer.style.left = '20px';
+    }
+    if (rect.bottom > window.innerHeight) {
+      uiContainer.style.top = 'auto';
+      uiContainer.style.bottom = '20px';
+    }
+  } catch (error) {
+    console.error("Failed to add UI to document:", error);
+    // Fallback: 알림으로 오류 표시
+    alert('UI 생성 중 오류가 발생했습니다. 페이지를 새로고침하고 다시 시도해주세요.');
+  }
 }
 
 // 결과 표시 함수
@@ -414,10 +488,20 @@ function displayError(message) {
 
 // 메시지 리스너 설정
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  console.log("Content script received message:", request);
+  
   if (request.action === "captureFullPage") {
     // 전체 페이지 캡처
     capturedData.html = document.documentElement.outerHTML;
-    createCrawlingUI('full');
+    console.log("Captured full page HTML");
+    try {
+      createCrawlingUI('full');
+      console.log("Created crawling UI for full page");
+      sendResponse({ success: true, message: "Full page UI created" });
+    } catch (error) {
+      console.error("Error creating UI:", error);
+      sendResponse({ success: false, error: error.message });
+    }
   } else if (request.action === "captureSelection") {
     // 선택한 텍스트 또는 요소 캡처
     const selection = window.getSelection();
@@ -431,9 +515,26 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       capturedData.xpath = getElementXPath(capturedData.selectedElement);
       capturedData.cssSelector = getElementCssSelector(capturedData.selectedElement);
       
-      createCrawlingUI('selection');
+      console.log("Captured selection:", {
+        html: capturedData.selectedHtml.substring(0, 100) + "...",
+        xpath: capturedData.xpath,
+        cssSelector: capturedData.cssSelector
+      });
+      
+      try {
+        createCrawlingUI('selection');
+        console.log("Created crawling UI for selection");
+        sendResponse({ success: true, message: "Selection UI created" });
+      } catch (error) {
+        console.error("Error creating UI:", error);
+        sendResponse({ success: false, error: error.message });
+      }
     } else {
+      console.warn("No selection found");
       alert('선택된 영역이 없습니다. 텍스트나 요소를 선택한 후 다시 시도해주세요.');
+      sendResponse({ success: false, error: "No selection found" });
     }
   }
+  
+  return true; // 비동기 응답을 위해 true 반환
 });

@@ -10,6 +10,9 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // API 키 표시/숨김 토글 버튼 핸들러
     document.getElementById('toggleApiKey').addEventListener('click', toggleApiKeyVisibility);
+    
+    // API 키 테스트 버튼 핸들러
+    document.getElementById('testApiBtn').addEventListener('click', testApiKey);
   });
   
   // 설정값 로드
@@ -17,7 +20,7 @@ document.addEventListener('DOMContentLoaded', function() {
     chrome.storage.sync.get(
       {
         apiKey: '',
-        apiEndpoint: 'https://api.deepseek.com/v1',
+        apiEndpoint: 'https://api.deepseek.com/v1/chat/completions',
         defaultLanguage: 'python'
       },
       function(items) {
@@ -61,13 +64,73 @@ document.addEventListener('DOMContentLoaded', function() {
     );
   }
   
+  // API 키 테스트
+  async function testApiKey() {
+    const apiKey = document.getElementById('apiKey').value.trim();
+    const apiEndpoint = document.getElementById('apiEndpoint').value.trim();
+    
+    if (!apiKey) {
+      showStatusMessage('API 키를 입력해주세요.', 'error');
+      return;
+    }
+    
+    const testBtn = document.getElementById('testApiBtn');
+    const originalText = testBtn.textContent;
+    testBtn.textContent = '테스트 중...';
+    testBtn.disabled = true;
+    
+    try {
+      const response = await fetch(apiEndpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model: "deepseek-chat",
+          messages: [
+            {
+              "role": "system",
+              "content": "You are a helpful assistant."
+            },
+            {
+              "role": "user",
+              "content": "Say hello"
+            }
+          ],
+          temperature: 0.3,
+          max_tokens: 50,
+          stream: false
+        })
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        showStatusMessage(`API 오류: ${errorData.error?.message || '알 수 없는 오류'}`, 'error');
+        console.error('API error:', errorData);
+        return;
+      }
+      
+      const data = await response.json();
+      showStatusMessage('API 키가 정상적으로 작동합니다!', 'success');
+      console.log('API response:', data);
+      
+    } catch (error) {
+      showStatusMessage(`API 테스트 실패: ${error.message}`, 'error');
+      console.error('API test error:', error);
+    } finally {
+      testBtn.textContent = originalText;
+      testBtn.disabled = false;
+    }
+  }
+  
   // 기본값으로 재설정
   function resetSettings() {
     if (confirm('모든 설정을 기본값으로 재설정하시겠습니까?')) {
       chrome.storage.sync.set(
         {
           apiKey: '',
-          apiEndpoint: 'https://api.deepseek.com/v1',
+          apiEndpoint: 'https://api.deepseek.com/v1/chat/completions',
           defaultLanguage: 'python'
         },
         function() {

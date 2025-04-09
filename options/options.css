@@ -57,18 +57,52 @@ body {
     box-sizing: border-box;
   }
   
-  input[type="password"] {
+  /* 입력창 + 버튼 레이아웃 */
+  .input-with-buttons {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+  
+  .input-with-buttons input[type="password"],
+  .input-with-buttons input[type="text"] {
+    flex-grow: 1;
     padding-right: 40px;
   }
   
   .icon-button {
     position: absolute;
     right: 10px;
-    top: 32px;
     background: none;
     border: none;
     cursor: pointer;
     font-size: 16px;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .test-button {
+    margin-left: 10px;
+    padding: 8px 12px;
+    background-color: #34a853;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    white-space: nowrap;
+    transition: background-color 0.2s;
+  }
+  
+  .test-button:hover {
+    background-color: #2e8f49;
+  }
+  
+  .test-button:disabled {
+    background-color: #a0c9ab;
+    cursor: not-allowed;
   }
   
   .help-text {
@@ -139,4 +173,17 @@ body {
     background-color: #fce8e6;
     color: #db4437;
     border: 1px solid #db4437;
+  }
+  
+  .footer {
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid #eee;
+    text-align: center;
+    color: #666;
+    font-size: 12px;
+  }
+  
+  .footer p {
+    margin: 5px 0;
   }
