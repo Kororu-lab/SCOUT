@@ -4,7 +4,7 @@
 
 ---
 
-![Status](https://img.shields.io/badge/status-Beta%20v.1.0.1-green)
+![Status](https://img.shields.io/badge/status-v.1.0.2%20(Beta)-green)
 ![Chrome](https://img.shields.io/badge/Chrome-88%2B-blue?logo=googlechrome)
 ![DeepSeek API](https://img.shields.io/badge/DeepSeek-API-green?logo=deepseek)
 ![License](https://img.shields.io/badge/License-MIT-brightgreen)
