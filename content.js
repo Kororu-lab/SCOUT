@@ -792,7 +792,7 @@ function displayResult(data) {
     const explanation = document.createElement('div');
     explanation.style.cssText = `
       font-size: 14px;
-      line-height: 1.5;
+      line-height: 1.6;
       color: #444;
       max-height: 200px;
       overflow-y: auto;
@@ -800,8 +800,68 @@ function displayResult(data) {
       scrollbar-width: thin;
       scrollbar-color: #888 #f8f9fa;
     `;
-    explanation.textContent = data.explanation;
-    
+
+    // Convert markdown to HTML
+    let formattedExplanation = data.explanation
+      // Headers
+      .replace(/### (.*?)\n/g, '<h3>$1</h3>')
+      .replace(/## (.*?)\n/g, '<h2>$1</h2>')
+      .replace(/# (.*?)\n/g, '<h1>$1</h1>')
+      // Bold
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      // Italic
+      .replace(/\*(.*?)\*/g, '<em>$1</em>')
+      // Code blocks
+      .replace(/```([^`]+)```/g, '<pre><code>$1</code></pre>')
+      // Inline code
+      .replace(/`([^`]+)`/g, '<code>$1</code>')
+      // Lists
+      .replace(/^\s*-\s(.+)/gm, '<li>$1</li>')
+      .replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>')
+      // Line breaks
+      .replace(/\n/g, '<br>');
+
+    explanation.innerHTML = formattedExplanation;
+
+    // Add markdown-specific styles
+    const markdownStyles = document.createElement('style');
+    markdownStyles.textContent = `
+      .explanation-content code {
+        background-color: #f3f4f6;
+        padding: 2px 4px;
+        border-radius: 3px;
+        font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+        font-size: 0.9em;
+      }
+      .explanation-content pre {
+        background-color: #f3f4f6;
+        padding: 10px;
+        border-radius: 4px;
+        overflow-x: auto;
+        margin: 10px 0;
+      }
+      .explanation-content pre code {
+        background-color: transparent;
+        padding: 0;
+      }
+      .explanation-content h1, h2, h3 {
+        margin: 15px 0 10px 0;
+        color: #2c3e50;
+      }
+      .explanation-content ul {
+        margin: 10px 0;
+        padding-left: 20px;
+      }
+      .explanation-content li {
+        margin: 5px 0;
+      }
+      .explanation-content strong {
+        color: #2c3e50;
+      }
+    `;
+    document.head.appendChild(markdownStyles);
+
+    explanation.className = 'explanation-content';
     explanationSection.appendChild(explanationTitle);
     explanationSection.appendChild(explanation);
     scrollContainer.appendChild(explanationSection);

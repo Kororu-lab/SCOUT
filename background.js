@@ -227,7 +227,7 @@ ${htmlContent}
           // API 응답에서 코드와 설명 추출
           const content = responseData.choices?.[0]?.message?.content || "API 응답 처리 오류";
           
-          // 코드와 설명 분리
+          // 코드와 설명 분리 및 마크다운 포맷팅
           let code = "";
           let explanation = "";
           
@@ -235,9 +235,23 @@ ${htmlContent}
           const codeMatch = content.match(/```(?:python|javascript|java|csharp)?\s*([\s\S]*?)```/);
           if (codeMatch && codeMatch[1]) {
             code = codeMatch[1].trim();
-            explanation = content.replace(codeMatch[0], "").trim();
+            // 설명 부분을 마크다운 형식으로 정리
+            explanation = content
+              .replace(codeMatch[0], "") // 코드 블록 제거
+              .trim()
+              // 헤더 정리
+              .replace(/^(.*?)(?=\n|$)/gm, '### $1') // 첫 줄을 h3로
+              .replace(/^설명:|^참고:|^주의:/gm, '### $&') // 주요 섹션을 h3로
+              // 중요 포인트 강조
+              .replace(/`([^`]+)`/g, '**`$1`**') // 인라인 코드를 볼드 처리
+              .replace(/(참고|주의|중요):/g, '**$1:**') // 주요 키워드 볼드 처리
+              // 리스트 포맷팅
+              .replace(/^\d+\.\s/gm, '- ') // 숫자 리스트를 불릿으로 변환
+              // 줄바꿈 보존
+              .replace(/\n\n/g, '\n\n'); 
           } else {
             code = content;
+            explanation = "코드에 대한 설명이 생성되지 않았습니다.";
           }
           
           console.log("Sending response back to content script");
