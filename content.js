@@ -290,69 +290,85 @@ function createCrawlingUI(mode) {
   // Add resizing functionality
   let isResizing = false;
   let currentHandle = null;
+  let startRect = null;
+  let startEvent = null;
 
   const initResize = (e, handle) => {
     isResizing = true;
     currentHandle = handle;
-    
-    // Store initial state
-    const startRect = uiContainer.getBoundingClientRect();
-    const startPos = {
-      mouse: { x: e.clientX, y: e.clientY },
-      rect: {
-        left: startRect.left,
-        top: startRect.top,
-        width: startRect.width,
-        height: startRect.height
-      }
-    };
+    startRect = uiContainer.getBoundingClientRect();
+    startEvent = e;
 
     const onMouseMove = (e) => {
       if (!isResizing) return;
-      e.preventDefault();
 
-      // Calculate mouse movement
-      const dx = e.clientX - startPos.mouse.x;
-      const dy = e.clientY - startPos.mouse.y;
+      const deltaX = e.clientX - startEvent.clientX;
+      const deltaY = e.clientY - startEvent.clientY;
+      
+      let newWidth = startRect.width;
+      let newHeight = startRect.height;
+      let newTranslateX = 0;
+      let newTranslateY = 0;
 
-      // Initialize new dimensions and position
-      let newPos = {
-        left: startPos.rect.left,
-        top: startPos.rect.top,
-        width: startPos.rect.width,
-        height: startPos.rect.height
-      };
+      // Get current transform
+      const transform = window.getComputedStyle(uiContainer).transform;
+      const matrix = new DOMMatrixReadOnly(transform === 'none' ? 'matrix(1, 0, 0, 1, 0, 0)' : transform);
+      const currentTranslateX = matrix.m41;
+      const currentTranslateY = matrix.m42;
 
-      // Always keep the opposite corner fixed
-      if (handle.includes('e')) {  // Right edge - left edge fixed
-        newPos.width = Math.max(250, startPos.rect.width + dx);
-      }
-      if (handle.includes('w')) {  // Left edge - right edge fixed
-        const newWidth = Math.max(250, startPos.rect.width - dx);
-        newPos.left = startPos.rect.left + startPos.rect.width - newWidth;
-        newPos.width = newWidth;
-      }
-      if (handle.includes('s')) {  // Bottom edge - top edge fixed
-        newPos.height = Math.max(200, startPos.rect.height + dy);
-      }
-      if (handle.includes('n')) {  // Top edge - bottom edge fixed
-        const newHeight = Math.max(200, startPos.rect.height - dy);
-        newPos.top = startPos.rect.top + startPos.rect.height - newHeight;
-        newPos.height = newHeight;
+      // Calculate new dimensions based on resize direction
+      switch(currentHandle) {
+        case 'e':
+          newWidth = Math.max(250, startRect.width + deltaX);
+          break;
+        case 'w':
+          newWidth = Math.max(250, startRect.width - deltaX);
+          newTranslateX = currentTranslateX + deltaX;
+          break;
+        case 's':
+          newHeight = Math.max(200, startRect.height + deltaY);
+          break;
+        case 'n':
+          newHeight = Math.max(200, startRect.height - deltaY);
+          newTranslateY = currentTranslateY + deltaY;
+          break;
+        case 'se':
+          newWidth = Math.max(250, startRect.width + deltaX);
+          newHeight = Math.max(200, startRect.height + deltaY);
+          break;
+        case 'sw':
+          newWidth = Math.max(250, startRect.width - deltaX);
+          newHeight = Math.max(200, startRect.height + deltaY);
+          newTranslateX = currentTranslateX + deltaX;
+          break;
+        case 'ne':
+          newWidth = Math.max(250, startRect.width + deltaX);
+          newHeight = Math.max(200, startRect.height - deltaY);
+          newTranslateY = currentTranslateY + deltaY;
+          break;
+        case 'nw':
+          newWidth = Math.max(250, startRect.width - deltaX);
+          newHeight = Math.max(200, startRect.height - deltaY);
+          newTranslateX = currentTranslateX + deltaX;
+          newTranslateY = currentTranslateY + deltaY;
+          break;
       }
 
       // Apply new dimensions
-      uiContainer.style.width = `${newPos.width}px`;
-      uiContainer.style.height = `${newPos.height}px`;
+      uiContainer.style.width = `${newWidth}px`;
+      uiContainer.style.height = `${newHeight}px`;
 
-      // Calculate position relative to viewport and apply transform
-      const transformX = newPos.left - window.pageXOffset;
-      const transformY = newPos.top - window.pageYOffset;
-      uiContainer.style.transform = `translate(${transformX}px, ${transformY}px)`;
+      // Update position if resizing from left or top edges
+      if (newTranslateX !== 0 || newTranslateY !== 0) {
+        uiContainer.style.transform = `translate(${newTranslateX}px, ${newTranslateY}px)`;
+      }
     };
 
     const onMouseUp = () => {
       isResizing = false;
+      currentHandle = null;
+      startRect = null;
+      startEvent = null;
       document.removeEventListener('mousemove', onMouseMove);
       document.removeEventListener('mouseup', onMouseUp);
     };
