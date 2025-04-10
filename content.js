@@ -83,6 +83,87 @@ function getElementCssSelector(element) {
 function createCrawlingUI(mode) {
   console.log("Creating crawling UI for mode:", mode);
 
+  // Add spinner CSS and drag/resize styles
+  const customStyles = document.createElement('style');
+  customStyles.textContent = `
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .scout-spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid #ffffff;
+      border-radius: 50%;
+      border-top-color: transparent;
+      animation: spin 0.8s linear infinite;
+      margin-right: 8px;
+      vertical-align: middle;
+    }
+    .scout-resize-handle {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      background-color: #4285f4;
+      border-radius: 50%;
+      z-index: 2147483647;
+    }
+    .scout-resize-handle.se {
+      bottom: -5px;
+      right: -5px;
+      cursor: se-resize;
+    }
+    .scout-resize-handle.sw {
+      bottom: -5px;
+      left: -5px;
+      cursor: sw-resize;
+    }
+    .scout-resize-handle.ne {
+      top: -5px;
+      right: -5px;
+      cursor: ne-resize;
+    }
+    .scout-resize-handle.nw {
+      top: -5px;
+      left: -5px;
+      cursor: nw-resize;
+    }
+    .scout-resize-edge {
+      position: absolute;
+      z-index: 2147483647;
+    }
+    .scout-resize-edge.n {
+      top: -3px;
+      left: 10px;
+      right: 10px;
+      height: 6px;
+      cursor: n-resize;
+    }
+    .scout-resize-edge.s {
+      bottom: -3px;
+      left: 10px;
+      right: 10px;
+      height: 6px;
+      cursor: s-resize;
+    }
+    .scout-resize-edge.e {
+      right: -3px;
+      top: 10px;
+      bottom: 10px;
+      width: 6px;
+      cursor: e-resize;
+    }
+    .scout-resize-edge.w {
+      left: -3px;
+      top: 10px;
+      bottom: 10px;
+      width: 6px;
+      cursor: w-resize;
+    }
+  `;
+  document.head.appendChild(customStyles);
+
   // 이미 존재하는 UI가 있다면 제거
   const existingUI = document.getElementById('crawling-assistant-ui');
   if (existingUI) {
@@ -98,6 +179,8 @@ function createCrawlingUI(mode) {
     top: 20px;
     right: 20px;
     width: 350px;
+    min-width: 250px;
+    min-height: 200px;
     background: white;
     border: 2px solid #4285f4;
     border-radius: 8px;
@@ -105,20 +188,43 @@ function createCrawlingUI(mode) {
     z-index: 2147483647;
     font-family: Arial, sans-serif;
     padding: 20px;
-    transition: all 0.3s ease;
+    transition: none;
+    resize: both;
+    overflow: auto;
   `;
   
-  // 헤더 생성
+  // 헤더 생성 (드래그 핸들로 사용)
   const header = document.createElement('div');
   header.style.cssText = `
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 15px;
+    margin: -20px -20px 15px -20px;
     border-bottom: 1px solid #eee;
-    padding-bottom: 10px;
+    padding: 15px 20px;
+    cursor: move;
+    background: white;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+    user-select: none;
   `;
   
+  // Add resize handles
+  const positions = ['nw', 'ne', 'sw', 'se'];
+  positions.forEach(pos => {
+    const handle = document.createElement('div');
+    handle.className = `scout-resize-handle ${pos}`;
+    uiContainer.appendChild(handle);
+  });
+
+  // Add resize edges
+  const edges = ['n', 's', 'e', 'w'];
+  edges.forEach(edge => {
+    const edgeElem = document.createElement('div');
+    edgeElem.className = `scout-resize-edge ${edge}`;
+    uiContainer.appendChild(edgeElem);
+  });
+
   const title = document.createElement('h3');
   title.textContent = mode === 'full' ? '전체 페이지 크롤링' : '선택 영역 크롤링';
   title.style.margin = '0';
@@ -138,7 +244,137 @@ function createCrawlingUI(mode) {
   header.appendChild(title);
   header.appendChild(closeBtn);
   uiContainer.appendChild(header);
-  
+
+  // Add dragging functionality
+  let isDragging = false;
+  let currentX;
+  let currentY;
+  let initialX;
+  let initialY;
+  let xOffset = 0;
+  let yOffset = 0;
+
+  const startDragging = (e) => {
+    if (e.target.closest('button')) return; // Don't start drag if clicking buttons
+    isDragging = true;
+    const transform = window.getComputedStyle(uiContainer).transform;
+    const matrix = new DOMMatrixReadOnly(transform === 'none' ? 'matrix(1, 0, 0, 1, 0, 0)' : transform);
+    xOffset = matrix.m41;
+    yOffset = matrix.m42;
+    initialX = e.clientX - xOffset;
+    initialY = e.clientY - yOffset;
+    uiContainer.style.cursor = 'move';
+  };
+
+  const drag = (e) => {
+    if (!isDragging) return;
+    e.preventDefault();
+    currentX = e.clientX - initialX;
+    currentY = e.clientY - initialY;
+    xOffset = currentX;
+    yOffset = currentY;
+    
+    // Update position without viewport restriction
+    uiContainer.style.transform = `translate(${currentX}px, ${currentY}px)`;
+  };
+
+  const stopDragging = () => {
+    isDragging = false;
+    uiContainer.style.cursor = 'default';
+  };
+
+  header.addEventListener('mousedown', startDragging);
+  document.addEventListener('mousemove', drag);
+  document.addEventListener('mouseup', stopDragging);
+
+  // Add resizing functionality
+  let isResizing = false;
+  let currentHandle = null;
+
+  const initResize = (e, handle) => {
+    isResizing = true;
+    currentHandle = handle;
+    
+    // Store initial state
+    const startRect = uiContainer.getBoundingClientRect();
+    const startPos = {
+      mouse: { x: e.clientX, y: e.clientY },
+      rect: {
+        left: startRect.left,
+        top: startRect.top,
+        width: startRect.width,
+        height: startRect.height
+      }
+    };
+
+    const onMouseMove = (e) => {
+      if (!isResizing) return;
+      e.preventDefault();
+
+      // Calculate mouse movement
+      const dx = e.clientX - startPos.mouse.x;
+      const dy = e.clientY - startPos.mouse.y;
+
+      // Initialize new dimensions and position
+      let newPos = {
+        left: startPos.rect.left,
+        top: startPos.rect.top,
+        width: startPos.rect.width,
+        height: startPos.rect.height
+      };
+
+      // Always keep the opposite corner fixed
+      if (handle.includes('e')) {  // Right edge - left edge fixed
+        newPos.width = Math.max(250, startPos.rect.width + dx);
+      }
+      if (handle.includes('w')) {  // Left edge - right edge fixed
+        const newWidth = Math.max(250, startPos.rect.width - dx);
+        newPos.left = startPos.rect.left + startPos.rect.width - newWidth;
+        newPos.width = newWidth;
+      }
+      if (handle.includes('s')) {  // Bottom edge - top edge fixed
+        newPos.height = Math.max(200, startPos.rect.height + dy);
+      }
+      if (handle.includes('n')) {  // Top edge - bottom edge fixed
+        const newHeight = Math.max(200, startPos.rect.height - dy);
+        newPos.top = startPos.rect.top + startPos.rect.height - newHeight;
+        newPos.height = newHeight;
+      }
+
+      // Apply new dimensions
+      uiContainer.style.width = `${newPos.width}px`;
+      uiContainer.style.height = `${newPos.height}px`;
+
+      // Calculate position relative to viewport and apply transform
+      const transformX = newPos.left - window.pageXOffset;
+      const transformY = newPos.top - window.pageYOffset;
+      uiContainer.style.transform = `translate(${transformX}px, ${transformY}px)`;
+    };
+
+    const onMouseUp = () => {
+      isResizing = false;
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+    };
+
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+  };
+
+  document.querySelectorAll('.scout-resize-handle').forEach(handle => {
+    handle.addEventListener('mousedown', (e) => {
+      e.stopPropagation();
+      initResize(e, handle.className.split(' ')[1]);
+    });
+  });
+
+  document.querySelectorAll('.scout-resize-edge').forEach(edge => {
+    edge.addEventListener('mousedown', (e) => {
+      e.stopPropagation();
+      initResize(e, edge.className.split(' ')[1]);
+    });
+  });
+
   // 요구사항 입력 필드
   const queryLabel = document.createElement('label');
   queryLabel.textContent = '추가 요구사항 (어떤 데이터를 추출하고 싶으신가요?)';
@@ -202,7 +438,7 @@ function createCrawlingUI(mode) {
   
   submitBtn.onclick = () => {
     const additionalQuery = queryInput.value;
-    submitBtn.textContent = '생성 중...';
+    submitBtn.innerHTML = '<span class="scout-spinner"></span>생성 중';
     submitBtn.disabled = true;
     
     // API 요청 준비
@@ -308,17 +544,65 @@ function displayResult(data) {
     uiContainer.removeChild(uiContainer.firstChild);
   }
   
-  // 헤더 추가
+  // 헤더 추가 (드래그 가능하도록 수정)
   const header = document.createElement('div');
   header.style.cssText = `
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 15px;
+    margin: -20px -20px 15px -20px;
     border-bottom: 1px solid #eee;
-    padding-bottom: 10px;
+    padding: 15px 20px;
+    cursor: move;
+    background: white;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+    user-select: none;
+    position: sticky;
+    top: 0;
+    z-index: 2;
   `;
-  
+
+  // Add dragging functionality to result view
+  let isDragging = false;
+  let currentX;
+  let currentY;
+  let initialX;
+  let initialY;
+  let xOffset = 0;
+  let yOffset = 0;
+
+  const startDragging = (e) => {
+    if (e.target.closest('button')) return;
+    isDragging = true;
+    const transform = window.getComputedStyle(uiContainer).transform;
+    const matrix = new DOMMatrixReadOnly(transform === 'none' ? 'matrix(1, 0, 0, 1, 0, 0)' : transform);
+    xOffset = matrix.m41;
+    yOffset = matrix.m42;
+    initialX = e.clientX - xOffset;
+    initialY = e.clientY - yOffset;
+    uiContainer.style.cursor = 'move';
+  };
+
+  const drag = (e) => {
+    if (!isDragging) return;
+    e.preventDefault();
+    currentX = e.clientX - initialX;
+    currentY = e.clientY - initialY;
+    xOffset = currentX;
+    yOffset = currentY;
+    uiContainer.style.transform = `translate(${currentX}px, ${currentY}px)`;
+  };
+
+  const stopDragging = () => {
+    isDragging = false;
+    uiContainer.style.cursor = 'default';
+  };
+
+  header.addEventListener('mousedown', startDragging);
+  document.addEventListener('mousemove', drag);
+  document.addEventListener('mouseup', stopDragging);
+
   const title = document.createElement('h3');
   title.textContent = '크롤링 코드 생성 결과';
   title.style.margin = '0';
@@ -335,27 +619,75 @@ function displayResult(data) {
   
   header.appendChild(title);
   header.appendChild(closeBtn);
-  uiContainer.appendChild(header);
+  
+  // 스크롤 가능한 컨테이너
+  const scrollContainer = document.createElement('div');
+  scrollContainer.style.cssText = `
+    max-height: calc(80vh - 150px);
+    overflow-y: auto;
+    padding-right: 10px;
+    margin-right: -10px;
+  `;
   
   // 코드 표시
   const codeContainer = document.createElement('div');
   codeContainer.style.cssText = `
     margin-bottom: 15px;
     background: #f5f5f5;
-    padding: 10px;
+    padding: 15px;
     border-radius: 4px;
-    overflow-x: auto;
-    max-height: 400px;
-    overflow-y: auto;
+    position: relative;
   `;
   
   const code = document.createElement('pre');
-  code.style.margin = '0';
-  code.style.whiteSpace = 'pre-wrap';
+  code.style.cssText = `
+    margin: 0;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    max-height: 300px;
+    overflow-y: auto;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 13px;
+    line-height: 1.4;
+    scrollbar-width: thin;
+    scrollbar-color: #888 #f5f5f5;
+  `;
   code.textContent = data.code || '코드가 생성되지 않았습니다.';
   
+  // 스크롤바 스타일 (WebKit 브라우저용)
+  const scrollbarStyle = document.createElement('style');
+  scrollbarStyle.textContent = `
+    pre::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    pre::-webkit-scrollbar-track {
+      background: #f5f5f5;
+      border-radius: 4px;
+    }
+    pre::-webkit-scrollbar-thumb {
+      background: #888;
+      border-radius: 4px;
+    }
+    pre::-webkit-scrollbar-thumb:hover {
+      background: #666;
+    }
+  `;
+  document.head.appendChild(scrollbarStyle);
+  
   codeContainer.appendChild(code);
-  uiContainer.appendChild(codeContainer);
+  scrollContainer.appendChild(codeContainer);
+  
+  // 버튼 컨테이너 (스크롤 영역 밖에 고정)
+  const buttonContainer = document.createElement('div');
+  buttonContainer.style.cssText = `
+    position: sticky;
+    bottom: 0;
+    background: white;
+    padding: 10px 0;
+    border-top: 1px solid #eee;
+    z-index: 1;
+  `;
   
   // 복사 버튼
   const copyBtn = document.createElement('button');
@@ -382,7 +714,6 @@ function displayResult(data) {
       })
       .catch(err => {
         console.error('복사 실패:', err);
-        // 클립보드 API를 사용할 수 없는 경우 대체 방법
         const textArea = document.createElement('textarea');
         textArea.value = data.code || '';
         textArea.style.position = 'fixed';
@@ -398,8 +729,6 @@ function displayResult(data) {
       });
   };
   
-  uiContainer.appendChild(copyBtn);
-  
   // 돌아가기 버튼
   const backBtn = document.createElement('button');
   backBtn.textContent = '새로운 코드 생성';
@@ -412,12 +741,10 @@ function displayResult(data) {
     cursor: pointer;
     font-weight: bold;
     width: 100%;
-    margin-bottom: 15px;
   `;
   
   backBtn.onclick = () => {
     document.body.removeChild(uiContainer);
-    // 현재 DOM에서 선택된 부분이 있는지 확인
     const selection = window.getSelection();
     if (selection.rangeCount > 0) {
       createCrawlingUI('selection');
@@ -426,23 +753,47 @@ function displayResult(data) {
     }
   };
   
-  uiContainer.appendChild(backBtn);
+  buttonContainer.appendChild(copyBtn);
+  buttonContainer.appendChild(backBtn);
   
-  // 설명 추가
+  // 설명 섹션
   if (data.explanation) {
+    const explanationSection = document.createElement('div');
+    explanationSection.style.cssText = `
+      margin-top: 15px;
+      padding: 15px;
+      background: #f8f9fa;
+      border-radius: 4px;
+    `;
+    
     const explanationTitle = document.createElement('h4');
     explanationTitle.textContent = '코드 설명';
-    explanationTitle.style.marginBottom = '5px';
+    explanationTitle.style.cssText = `
+      margin: 0 0 10px 0;
+      color: #202124;
+    `;
     
     const explanation = document.createElement('div');
-    explanation.style.marginBottom = '15px';
-    explanation.style.fontSize = '14px';
-    explanation.style.lineHeight = '1.5';
+    explanation.style.cssText = `
+      font-size: 14px;
+      line-height: 1.5;
+      color: #444;
+      max-height: 200px;
+      overflow-y: auto;
+      padding-right: 10px;
+      scrollbar-width: thin;
+      scrollbar-color: #888 #f8f9fa;
+    `;
     explanation.textContent = data.explanation;
     
-    uiContainer.appendChild(explanationTitle);
-    uiContainer.appendChild(explanation);
+    explanationSection.appendChild(explanationTitle);
+    explanationSection.appendChild(explanation);
+    scrollContainer.appendChild(explanationSection);
   }
+  
+  uiContainer.appendChild(header);
+  uiContainer.appendChild(scrollContainer);
+  uiContainer.appendChild(buttonContainer);
 }
 
 // 오류 표시 함수
