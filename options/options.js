@@ -21,12 +21,14 @@ document.addEventListener('DOMContentLoaded', function() {
       {
         apiKey: '',
         apiEndpoint: 'https://api.deepseek.com/v1/chat/completions',
-        defaultLanguage: 'python'
+        defaultLanguage: 'python',
+        modelType: 'deepseek-chat' // Add default model type
       },
       function(items) {
         document.getElementById('apiKey').value = items.apiKey;
         document.getElementById('apiEndpoint').value = items.apiEndpoint;
         document.getElementById('defaultLanguage').value = items.defaultLanguage;
+        document.getElementById('modelType').value = items.modelType;
       }
     );
   }
@@ -36,6 +38,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const apiKey = document.getElementById('apiKey').value.trim();
     const apiEndpoint = document.getElementById('apiEndpoint').value.trim();
     const defaultLanguage = document.getElementById('defaultLanguage').value;
+    const modelType = document.getElementById('modelType').value;
     
     // 입력 검증
     if (apiEndpoint === '') {
@@ -56,7 +59,8 @@ document.addEventListener('DOMContentLoaded', function() {
       {
         apiKey: apiKey,
         apiEndpoint: apiEndpoint,
-        defaultLanguage: defaultLanguage
+        defaultLanguage: defaultLanguage,
+        modelType: modelType
       },
       function() {
         showStatusMessage('설정이 저장되었습니다.', 'success');
@@ -68,6 +72,7 @@ document.addEventListener('DOMContentLoaded', function() {
   async function testApiKey() {
     const apiKey = document.getElementById('apiKey').value.trim();
     const apiEndpoint = document.getElementById('apiEndpoint').value.trim();
+    const modelType = document.getElementById('modelType').value;
     
     if (!apiKey) {
       showStatusMessage('API 키를 입력해주세요.', 'error');
@@ -87,7 +92,7 @@ document.addEventListener('DOMContentLoaded', function() {
           'Authorization': `Bearer ${apiKey}`
         },
         body: JSON.stringify({
-          model: "deepseek-chat",
+          model: modelType,
           messages: [
             {
               "role": "system",
@@ -127,18 +132,24 @@ document.addEventListener('DOMContentLoaded', function() {
   // 기본값으로 재설정
   function resetSettings() {
     if (confirm('모든 설정을 기본값으로 재설정하시겠습니까?')) {
-      chrome.storage.sync.set(
-        {
-          apiKey: '',
-          apiEndpoint: 'https://api.deepseek.com/v1/chat/completions',
-          defaultLanguage: 'python'
-        },
-        function() {
-          // 설정값 다시 로드
-          loadSettings();
-          showStatusMessage('설정이 기본값으로 재설정되었습니다.', 'success');
-        }
-      );
+      const defaultSettings = {
+        apiKey: '',
+        apiEndpoint: 'https://api.deepseek.com/v1/chat/completions',
+        defaultLanguage: 'python',
+        modelType: 'deepseek-chat'
+      };
+
+      chrome.storage.sync.set(defaultSettings, function() {
+        // 설정값 다시 로드
+        loadSettings();
+        showStatusMessage('설정이 기본값으로 재설정되었습니다.', 'success');
+      });
+
+      // UI 업데이트
+      document.getElementById('apiKey').value = defaultSettings.apiKey;
+      document.getElementById('apiEndpoint').value = defaultSettings.apiEndpoint;
+      document.getElementById('defaultLanguage').value = defaultSettings.defaultLanguage;
+      document.getElementById('modelType').value = defaultSettings.modelType;
     }
   }
   

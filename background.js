@@ -143,7 +143,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "processHtml") {
     console.log("Processing HTML request received");
     // DeepSeek API 호출 및 결과 처리
-    chrome.storage.sync.get(["apiKey", "apiEndpoint", "defaultLanguage"], async (config) => {
+    chrome.storage.sync.get(["apiKey", "apiEndpoint", "defaultLanguage", "modelType"], async (config) => {
       try {
         if (!config.apiKey) {
           sendResponse({ 
@@ -161,6 +161,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
         // 요청할 언어 설정
         const codeLanguage = config.defaultLanguage || "python";
+        // 사용할 모델 설정
+        const modelType = config.modelType || "deepseek-chat";
         
         // 선택 영역 정보
         const selectionInfo = request.selectedText ? 
@@ -185,10 +187,8 @@ ${htmlContent}
 1. 요구사항에 맞는 ${codeLanguage} 크롤링 코드
 2. 코드에 대한 간단한 설명`;
 
-        console.log("Sending request to DeepSeek API with language:", codeLanguage);
+        console.log("Sending request to DeepSeek API with language:", codeLanguage, "and model:", modelType);
         
-        // DeepSeek API 호출 - OpenAI와 호환되는 API 형식 사용
-        // baseURL: https://api.deepseek.com/v1/chat/completions
         try {
           const response = await fetch("https://api.deepseek.com/v1/chat/completions", {
             method: 'POST',
@@ -197,7 +197,7 @@ ${htmlContent}
               'Authorization': `Bearer ${config.apiKey}`
             },
             body: JSON.stringify({
-              model: "deepseek-chat",  // Using the latest DeepSeek-V3 model
+              model: modelType,  // Use the selected model type
               messages: [
                 {
                   "role": "system", 
